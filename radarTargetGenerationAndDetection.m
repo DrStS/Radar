@@ -33,7 +33,7 @@ slope=B/Tchirp; %(-)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% END FMCW Waveform Generation
 %The number of chirps in one sequence. Its ideal to have 2^ value for the ease of running the FFT for Doppler Estimation. 
-Nd=128;                   % #of doppler cells OR #of sent periods % number of chirps
+Nd=2;                   % #of doppler cells OR #of sent periods % number of chirps
 %The number of samples on each chirp. 
 Nr=1024;                  %for length of time OR # of range cells
 % Timestamp for running the displacement scenario for every sample on each chirp
@@ -55,20 +55,24 @@ for i=1:length(t)
     
     % *%TODO* :
     %For each time stamp update the Range of the Target for constant velocity. 
-    
+    range=R+v*t(i);
     % *%TODO* :
     %For each time sample we need update the transmitted and
     %received signal. 
-    Tx(i) = 0
-    Rx (i)  =0
+    
+    
+    Tx(i) = cos((fc*t(i)+slope*t(i)*t(i)/2)*2*pi);
+    tau = (range/c)*2; %trip time
+    Rx(i) = cos((fc* (t(i)-tau) +(slope*(t(i)-tau)*(t(i)-tau))/2)*2*pi);
     
     % *%TODO* :
     %Now by mixing the Transmit and Receive generate the beat signal
     %This is done by element wise matrix multiplication of Transmit and
     %Receiver Signal
-    Mix(i) = 0
+    Mix(i) = cos(2*pi*((2*slope*range/c)*t(i)+(2*fc*v/c)*Tchirp));
     
 end
+Mix=Tx.*Rx;
 %% END Signal generation and Moving Target simulation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% RANGE MEASUREMENT
@@ -77,6 +81,7 @@ end
  % *%TODO* :
 %reshape the vector into Nr*Nd array. Nr and Nd here would also define the size of
 %Range and Doppler FFT respectively.
+S=reshape(Mix,Nr,Nd);
 
  % *%TODO* :
 %run the FFT on the beat signal along the range bins dimension (Nr) and

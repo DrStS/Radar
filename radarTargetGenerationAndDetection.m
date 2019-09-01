@@ -35,10 +35,10 @@ slope=B/Tchirp; %(-)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% END FMCW Waveform Generation
 %The number of chirps in one sequence. Its ideal to have 2^ value for the ease of running the FFT for Doppler Estimation.
-Nd=1;                   % #of doppler cells OR #of sent periods % number of chirps
+Nd=2;                   % #of doppler cells OR #of sent periods % number of chirps
 %The number of samples on each chirp.
 Nr=2^(25-Nd);                  %for length of time OR # of range cells
-%Nr=2^4;                  %for length of time OR # of range cells
+Nr=2^4;                  %for length of time OR # of range cells
 % Timestamp for running the displacement scenario for every sample on each chirp
 t=linspace(0,Nd*Tchirp,Nr*Nd); %total time for samples
 deltaT=t(2)-t(1);
@@ -56,19 +56,37 @@ td=zeros(1,length(t));
 % Tx = cos((fc+slope*t/2).*t*2*pi);
 % norm(Tx-TxRef)
 n=0;
+endFreqTx=fc+B;
 for i=1:length(t)
-    tScal=t(i)-(n*Tchirp);    
-    currentFreq=fc+slope*t(i); % This is 1st derivative of (fc+slope*t(i)/2)*t(i)*2*pi
-    Tx(i) = cos((fc+slope*t(i)/2)*t(i)*2*pi);
+    tScal=t(i)-(n*Tchirp);
+    currentFreqTx=fc+slope*tScal; % This is 1st derivative of Tx=(fc+slope*t(i)/2)*t(i)*2*pi
+    if(currentFreqTx>endFreqTx)
+        n=n+1; %next bin
+        tScal=t(i)-(n*Tchirp);
+        disp(i)
+    end   
+    Tx(i) = cos((fc+slope*tScal/2)*tScal*2*pi);
     ttilde=tScal-2*(R+v*t(i))/c;
     if(ttilde>0 || n>0)
         Rx(i) = cos((fc*ttilde+slope*ttilde*ttilde/2)*2*pi);
     end
-    if(mod(i,(Nr))==0)
+end
+n=0;
+for i=1:length(t)
+    tScal=t(i)-(n*Tchirp);
+    currentFreqTx=fc+slope*tScal; % This is 1st derivative of Tx=(fc+slope*t(i)/2)*t(i)*2*pi
+    Tx2(i) = cos((fc+slope*tScal/2)*tScal*2*pi);
+    ttilde=tScal-2*(R+v*t(i))/c;
+    if(ttilde>0 || n>0)
+        Rx(i) = cos((fc*ttilde+slope*ttilde*ttilde/2)*2*pi);
+    end
+    if (mod(i,(Nr))==0)
         n=n+1; %next bin
         disp(i)
     end
 end
+norm(Tx-Tx2)
+
 Mix=Tx.*Rx;
 windowSize=Nr/2^4;
 [~,~,~,pxx1,fc1,tc1] = spectrogram(Tx,windowSize,ceil(windowSize*0.7),windowSize,1/deltaT,'yaxis','MinThreshold',-80);

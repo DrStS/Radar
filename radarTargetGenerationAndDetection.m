@@ -12,6 +12,7 @@ Rmax= 200;
 % Range Resolution = 1 m
 dres=1;
 % Max Velocity = 100 m/s
+vmax=70;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %speed of light = 3e8
@@ -19,7 +20,7 @@ dres=1;
 % define the target's initial position and velocity. Note : Velocity
 % remains contant
 R=110; %initial distance of the target
-v=-20; %velocity of the target - -> approaching deltaFD = positiv
+v=20; %velocity of the target - -> approaching deltaFD = positiv
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% FMCW Waveform Generation
 %Speed of light (m/s)
@@ -35,9 +36,8 @@ slope=B/Tchirp; %(-)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% END FMCW Waveform Generation
 %The number of chirps in one sequence. Its ideal to have 2^ value for the ease of running the FFT for Doppler Estimation.
-Nd=2^6;                   % #of doppler cells OR #of sent periods % number of chirps
+Nd=2^7;                   % #of doppler cells OR #of sent periods % number of chirps
 %The number of samples on each chirp.
-Nr=2^(25-Nd); %for length of time OR # of range cells
 Nr=2^12;
 % Timestamp for running the displacement scenario for every sample on each chirp
 t=linspace(0,Nd*Tchirp,Nr*Nd); %total time for samples
@@ -59,7 +59,6 @@ m=0;
 endFreqTx=fc+B;
 deltaDoppler=(c/(c+v))*fc-fc;
 endFreqRx=endFreqTx+deltaDoppler;
-endFreqRx=endFreqTx;
 for i=1:length(t)
     tScal1=t(i)-(n*Tchirp);
     currentFreqTx=fc+slope*tScal1; % This is 1st derivative of Tx=(fc+slope*t(i)/2)*t(i)*2*pi
@@ -70,7 +69,7 @@ for i=1:length(t)
     Tx(i) = cos((fc+slope*tScal1/2)*tScal1*2*pi);
     %Rx
     tScal2=t(i)-(m*Tchirp);
-    ttilde=tScal2-2*(R+v*t(i))/c;
+    ttilde=tScal2-2*(R-v*t(i))/c;
     currentFreqRx=fc+slope*ttilde;  
     if(currentFreqRx>endFreqRx)
         m=m+1; %next bin
@@ -81,61 +80,47 @@ for i=1:length(t)
         Rx(i) = cos((fc+slope*ttilde/2)*ttilde*2*pi);
     end
 end
-% n=0;
-% for i=1:length(t)
-%       r_t(i)=R+v*t(i); % range of the target in terms of its velocity and initial range
-%       ta(i)=2*r_t(i)/c; % delay for received signal
-%       if i>n*Nr && i<=(n+1)*Nr % doing this for D of periods (nt length of pulse)
-%           Tx(i)=sin(2*pi*(fc*t(i)+.5*slope*t(i)^2-slope*t(i)*n*Tchirp)); %transmitted signal
-%           Rx(i)=sin(2*pi*(fc*(t(i)-ta(i))+.5*slope*(t(i)-ta(i))^2-slope*(t(i)-ta(i))*n*Tchirp)); %received signal
-%       else
-%           n=n+1;
-%           Tx(i)=sin(2*pi*(fc*t(i)+.5*slope*t(i)^2-slope*t(i)*n*Tchirp)); %transmitted signal
-%           Rx(i)=sin(2*pi*(fc*(t(i)-ta(i))+.5*slope*(t(i)-ta(i))^2-slope*(t(i)-ta(i))*n*Tchirp)); %received signal
-%       end
-% end
 Mix=Tx.*Rx;
-% windowSize=Nr/2^4;
-% [~,~,~,pxx1,fc1,tc1] = spectrogram(Tx,windowSize,ceil(windowSize*0.7),windowSize,1/deltaT,'yaxis','MinThreshold',-80);
-% ylim([77,77.2]);
-% title('Linear Chirp Tx');
-% windowSize=Nr/2^4;
-% [~,~,~,pxx2,fc2,tc2] = spectrogram(Rx,windowSize,ceil(windowSize*0.7),windowSize,1/deltaT,'yaxis','MinThreshold',-80);
-% title('Linear Chirp Rx');
-% ylim([77,78]);
-% x1=tc1(pxx1>0);
-% y1=fc1(pxx1>0);
-% plot(x1,y1,'.');
-% hold on;
-% x2=tc2(pxx2>0);
-% y2=fc2(pxx2>0);
-% plot(x2,y2,'.r');
-% legend('Tx','Rx');
-% disp(['================================================================']);
-% disp(['VERIFICATION']);
-% disp(['================================================================']);
-% disp(['Start freq TX ref: ' num2str(fc) ' (Hz), ' num2str(fc/1e9) ' (GHz)']);
-% disp(['Start freq TX: ' num2str(y1(1)) ' (Hz), ' num2str(y1(1)/1e9) ' (GHz) , error (%): ' num2str(((y1(1)-fc)/fc)*1e2)]);
-% disp(['End freq TX ref: ' num2str(endFreqTx) ' (Hz), ' num2str(endFreqTx/1e9) ' (GHz)']);
-% disp(['================================================================']);
-% startFreqRxRef=(c/(c+v))*fc;
-% disp(['Start freq RX ref: ' num2str(startFreqRxRef) ' (Hz), ' num2str(startFreqRxRef/1e9)  ' (GHz)']);
-% startFreqRx=y2(1);
-% disp(['Start freq RX: ' num2str(y2(1)) ' (Hz), ' num2str(startFreqRx/1e9) ' (GHz), error (%): ' num2str(((startFreqRxRef-startFreqRx)/startFreqRx)*1e2)]);
-% disp(['End freq RX ref: ' num2str(endFreqRx) ' (Hz), ' num2str(endFreqRx/1e9) ' (GHz)']);
-% disp(['================================================================']);
-% disp(['Doppler freq shift ref: ' num2str(deltaDoppler) ' (Hz), ' num2str(deltaDoppler/1e9) ' (GHz)']);
-% %disp(['Doppler freq shift: ' num2str(y2(1)-y1(2)) ' (Hz), ' num2str((y2(1)-y1(2))/1e9) ' (GHz), error (%): ' num2str((((y2(1)-y1(2))-deltaDoppler)/deltaDoppler)*1e2)]);
+windowSize=Nr/2^4;
+[~,~,~,pxx1,fc1,tc1] = spectrogram(Tx,windowSize,ceil(windowSize*0.7),windowSize,1/deltaT,'yaxis','MinThreshold',-80);
+ylim([77,77.2]);
+title('Linear Chirp Tx');
+windowSize=Nr/2^4;
+[~,~,~,pxx2,fc2,tc2] = spectrogram(Rx,windowSize,ceil(windowSize*0.7),windowSize,1/deltaT,'yaxis','MinThreshold',-80);
+title('Linear Chirp Rx');
+ylim([77,78]);
+x1=tc1(pxx1>0);
+y1=fc1(pxx1>0);
+plot(x1,y1,'.');
+hold on;
+x2=tc2(pxx2>0);
+y2=fc2(pxx2>0);
+plot(x2,y2,'.r');
+legend('Tx','Rx');
+disp(['================================================================']);
+disp(['VERIFICATION']);
+disp(['================================================================']);
+disp(['Start freq TX ref: ' num2str(fc) ' (Hz), ' num2str(fc/1e9) ' (GHz)']);
+disp(['Start freq TX: ' num2str(y1(1)) ' (Hz), ' num2str(y1(1)/1e9) ' (GHz) , error (%): ' num2str(((y1(1)-fc)/fc)*1e2)]);
+disp(['End freq TX ref: ' num2str(endFreqTx) ' (Hz), ' num2str(endFreqTx/1e9) ' (GHz)']);
+disp(['================================================================']);
+startFreqRxRef=(c/(c+v))*fc;
+disp(['Start freq RX ref: ' num2str(startFreqRxRef) ' (Hz), ' num2str(startFreqRxRef/1e9)  ' (GHz)']);
+startFreqRx=y2(1);
+disp(['Start freq RX: ' num2str(y2(1)) ' (Hz), ' num2str(startFreqRx/1e9) ' (GHz), error (%): ' num2str(((startFreqRxRef-startFreqRx)/startFreqRx)*1e2)]);
+disp(['End freq RX ref: ' num2str(endFreqRx) ' (Hz), ' num2str(endFreqRx/1e9) ' (GHz)']);
+disp(['================================================================']);
+disp(['Doppler freq shift ref: ' num2str(deltaDoppler) ' (Hz), ' num2str(deltaDoppler/1e9) ' (GHz)']);
+%disp(['Doppler freq shift: ' num2str(y2(1)-y1(2)) ' (Hz), ' num2str((y2(1)-y1(2))/1e9) ' (GHz), error (%): ' num2str((((y2(1)-y1(2))-deltaDoppler)/deltaDoppler)*1e2)]);
 %% END Signal generation and Moving Target simulation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% RANGE MEASUREMENT
-
 %reshape the vector into Nr*Nd array. Nr and Nd here would also define the size of
 %Range and Doppler FFT respectively.
-S=reshape(Mix,Nr,Nd);
+Mix=reshape(Mix,Nr,Nd);
+%% START 1D FFT RANGE MEASUREMENT
 %run the FFT on the beat signal along the range bins dimension (Nr) and
 %normalize.
-Y = fft(S(:,1));
+Y = fft(Mix(:,1));
 % Take the absolute value of FFT output
 % Output of FFT is double sided signal, but we are interested in only one side of the spectrum.
 % Hence we throw out half of the samples.
@@ -144,74 +129,56 @@ P2 = fftshift(P2);
 P1 = P2(Nr/2+1:end);
 %plotting the range
 figure ('Name','Range from First FFT')
-subplot(2,1,1)
 % plot FFT output
 dist = linspace(0,(Nr/2)-1,Nr/2);
 plot(dist,P1);
 xlabel('Distance (m)');
-ylabel('|P1(f)|')
-axis ([0 Rmax 0 1]);
+ylabel('|Amplitude|');
+xlim([0 Rmax]);
+%% END 1D FFT -> this is inefficent and does not apply windows
 
 
-%% RANGE DOPPLER RESPONSE
-% The 2D FFT implementation is already provided here. This will run a 2DFFT
-% on the mixed signal (beat signal) output and generate a range doppler
-% map.You will implement CFAR on the generated RDM
-
-
-m1=reshape(Mix,Nr,Nd); %generating matrix ---> each row showing range info for one period AND each column showing number of periods
-[My,Ny]=size(m1');
-win=hamming(Ny);
-m2=conj(m1).*(win*ones(1,My)); %taking conjugate and applying window for sidelobe reduction (in time domain)
-Win=fft(hamming(My),Nd);
-M2=(fft(m2,2*Nr)); %First FFT for range information
-M3=fftshift(fft(M2',2*Nd)); %Second FFT for doppler information
-[My,Ny]=size(M3);
-doppler=linspace(-Nd,Nd,My);
-range=linspace(-Nr,Nr,Ny);
-figure;contour(range,doppler,abs(M3));grid on
-xlabel('Range')
-ylabel('Doppler')
-figure;mesh(range,doppler,abs(M3))
-xlabel('Range')
-ylabel('Doppler')
-
-% Range Doppler Map Generation.
-% This code is buggy therefore; I needed to reimpelemnt 
-%%%%%%%%%%%%%%%%
-Mix=reshape(Mix,[Nr,Nd]);
-
-% 2D FFT using the FFT size for both dimensions.
-sig_fft2 = fft2(Mix,Nr,Nd);
-
-% Taking just one side of signal from Range dimension.
-sig_fft2 = sig_fft2(1:Nr/2,1:Nd);
-sig_fft2 = fftshift (sig_fft2);
-RDM = abs(sig_fft2);
-RDM = 10*log10(RDM) ;
-
-%use the surf function to plot the output of 2DFFT and to show axis in both
-%dimensions
-doppler_axis = linspace(-100,100,Nd);
-range_axis = linspace(-200,200,Nr/2)*((Nr/2)/400);
-figure,surf(doppler_axis,range_axis,RDM);
-
-%%%%%%%%%%%%%
-
-Mix=reshape(Mix,Nr,Nd);
-% 2D FFT using the FFT size for both dimensions.
-P2=(fft(Mix,Nr)); %First FFT for range information
-P2=fftshift(fft(P2',Nd)); %Second FFT for doppler information
-P1 = P2(:,Nr/2+1:end);
-sig_fft2 = fft2(Mix,Nr,Nd);
-RDM = abs(P1);
-%RDM = 10*log10(P2) ;
+figure();
+Mix_Hann_Wnd=Mix.*(hamming(Nr)*ones(1,Nd));%tensor product with sampled hamm window 
+P2 = fft(Mix_Hann_Wnd)/Nr;%normalize amplitude spectrum
+P2=fft(P2'); % do second FFT on transpose of two-sided spectrum of 1st FFT
+P1 = fftshift(P2');
+P1 = P1(Nr/2+1:end,:); % Get one-sided spectrum for distance
 dist = linspace(0,(Nr/2)-1,Nr/2);
 doppler=linspace(-Nd,Nd,Nd);
-figure();
-surf(dist,doppler,RDM);
-%use the surf function to plot the output of 2DFFT and to show axis in both
-
+subplot(3,2,1);
+plot(dist,abs(P1)); %superpose all distance bins
+xlim([0 Rmax]);
+title('Distance with Hamm Wnd from 1st FFT');
+xlabel('Distance (m)');
+ylabel('|Amplitude|');
+P2 = fftshift(P2);
+subplot(3,2,3);
+plot(doppler,abs(P2));
+xlim([-vmax vmax]);
+title('Velocity with Hamm Wnd from 2nd FFT');
+xlabel('Doppler velocity (m/s)');
+ylabel('|Amplitude|');
+ax5 = subplot(3,2,5);
+contour(doppler,dist,abs(P1));
+colormap(ax5,hot(8))
+xlim([-vmax vmax]);
+ylim([0 Rmax]);
+title('Contour plot');
+xlabel('Doppler velocity (m/s)');
+ylabel('Distance (m)');
+grid on;
+grid minor;
+subplot(3,2,[2,4,6]);
+surf(doppler,dist,10*log10(abs(P1)));
+colormap default
+shading interp
+title('Surface plot');
+xlabel('Doppler velocity (m/s)');
+ylabel('Distance (m)');
+zlabel('dB|Amplitude|');
+xlim([-vmax vmax]);
+ylim([0 Rmax]);
 %% CFAR implementation
 
 %Slide Window through the complete Range Doppler Map

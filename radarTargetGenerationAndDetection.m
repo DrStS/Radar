@@ -36,7 +36,7 @@ slope=B/Tchirp; %(-)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% END FMCW Waveform Generation
 %The number of chirps in one sequence. Its ideal to have 2^ value for the ease of running the FFT for Doppler Estimation.
-Nd=2^7;                   % #of doppler cells OR #of sent periods % number of chirps
+Nd=2^8;                   % #of doppler cells OR #of sent periods % number of chirps
 %The number of samples on each chirp.
 Nr=2^12;
 % Timestamp for running the displacement scenario for every sample on each chirp
@@ -74,7 +74,7 @@ for i=1:length(t)
     if(currentFreqRx>endFreqRx)
         m=m+1; %next bin
         tScal2=t(i)-(m*Tchirp);
-        ttilde=tScal2-2*(R+v*t(i))/c;
+        ttilde=tScal2-2*(R-v*t(i))/c;
     end
     if(ttilde>0)
         Rx(i) = cos((fc+slope*ttilde/2)*ttilde*2*pi);
@@ -137,13 +137,13 @@ Mix=reshape(Mix,Nr,Nd);
 % xlim([0 Rmax]);
 %% END 1D FFT -> this is inefficent and does not apply windows
 figure();
-Mix_Hann_Wnd=Mix.*(hamming(Nr)*ones(1,Nd));%tensor product with sampled hamm window 
-P2 = fft(Mix_Hann_Wnd)/Nr;%normalize amplitude spectrum
+Mix_Hann_Wnd=Mix.*(hann(Nr)*ones(1,Nd));%tensor product with sampled hamm window 
+P2 = fft(Mix_Hann_Wnd);%normalize amplitude spectrum
 P2=fft(P2'); % do second FFT on transpose of two-sided spectrum of 1st FFT
 P1 = fftshift(P2');
 P1 = P1(Nr/2+1:end,:); % Get one-sided spectrum for distance
 dist = linspace(0,(Nr/2)-1,Nr/2);
-doppler=linspace(-Nd,Nd,Nd);
+doppler=linspace(-Nd,Nd,Nd)/(Nd/128);
 subplot(3,2,1);
 plot(dist,abs(P1)); %superpose all distance bins
 xlim([0 Rmax]);

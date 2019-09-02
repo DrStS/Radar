@@ -81,33 +81,33 @@ for i=1:length(t)
     end
 end
 Mix=Tx.*Rx;
-windowSize=Nr/2^4;
-[~,~,~,pxx1,fc1,tc1] = spectrogram(Tx,windowSize,ceil(windowSize*0.7),windowSize,1/deltaT,'yaxis','MinThreshold',-80);
-ylim([77,77.2]);
-title('Linear Chirp Tx');
-windowSize=Nr/2^4;
-[~,~,~,pxx2,fc2,tc2] = spectrogram(Rx,windowSize,ceil(windowSize*0.7),windowSize,1/deltaT,'yaxis','MinThreshold',-80);
-title('Linear Chirp Rx');
-ylim([77,78]);
-x1=tc1(pxx1>0);
-y1=fc1(pxx1>0);
-plot(x1,y1,'.');
-hold on;
-x2=tc2(pxx2>0);
-y2=fc2(pxx2>0);
-plot(x2,y2,'.r');
-legend('Tx','Rx');
+% windowSize=Nr/2^4;
+% [~,~,~,pxx1,fc1,tc1] = spectrogram(Tx,windowSize,ceil(windowSize*0.7),windowSize,1/deltaT,'yaxis','MinThreshold',-80);
+% ylim([77,77.2]);
+% title('Linear Chirp Tx');
+% windowSize=Nr/2^4;
+% [~,~,~,pxx2,fc2,tc2] = spectrogram(Rx,windowSize,ceil(windowSize*0.7),windowSize,1/deltaT,'yaxis','MinThreshold',-80);
+% title('Linear Chirp Rx');
+% ylim([77,78]);
+% x1=tc1(pxx1>0);
+% y1=fc1(pxx1>0);
+% plot(x1,y1,'.');
+% hold on;
+% x2=tc2(pxx2>0);
+% y2=fc2(pxx2>0);
+% plot(x2,y2,'.r');
+% legend('Tx','Rx');
 disp(['================================================================']);
 disp(['VERIFICATION']);
 disp(['================================================================']);
 disp(['Start freq TX ref: ' num2str(fc) ' (Hz), ' num2str(fc/1e9) ' (GHz)']);
-disp(['Start freq TX: ' num2str(y1(1)) ' (Hz), ' num2str(y1(1)/1e9) ' (GHz) , error (%): ' num2str(((y1(1)-fc)/fc)*1e2)]);
+% disp(['Start freq TX: ' num2str(y1(1)) ' (Hz), ' num2str(y1(1)/1e9) ' (GHz) , error (%): ' num2str(((y1(1)-fc)/fc)*1e2)]);
 disp(['End freq TX ref: ' num2str(endFreqTx) ' (Hz), ' num2str(endFreqTx/1e9) ' (GHz)']);
 disp(['================================================================']);
 startFreqRxRef=(c/(c+v))*fc;
 disp(['Start freq RX ref: ' num2str(startFreqRxRef) ' (Hz), ' num2str(startFreqRxRef/1e9)  ' (GHz)']);
-startFreqRx=y2(1);
-disp(['Start freq RX: ' num2str(y2(1)) ' (Hz), ' num2str(startFreqRx/1e9) ' (GHz), error (%): ' num2str(((startFreqRxRef-startFreqRx)/startFreqRx)*1e2)]);
+% startFreqRx=y2(1);
+% disp(['Start freq RX: ' num2str(y2(1)) ' (Hz), ' num2str(startFreqRx/1e9) ' (GHz), error (%): ' num2str(((startFreqRxRef-startFreqRx)/startFreqRx)*1e2)]);
 disp(['End freq RX ref: ' num2str(endFreqRx) ' (Hz), ' num2str(endFreqRx/1e9) ' (GHz)']);
 disp(['================================================================']);
 disp(['Doppler freq shift ref: ' num2str(deltaDoppler) ' (Hz), ' num2str(deltaDoppler/1e9) ' (GHz)']);
@@ -118,26 +118,24 @@ disp(['Doppler freq shift ref: ' num2str(deltaDoppler) ' (Hz), ' num2str(deltaDo
 %Range and Doppler FFT respectively.
 Mix=reshape(Mix,Nr,Nd);
 %% START 1D FFT RANGE MEASUREMENT
-%run the FFT on the beat signal along the range bins dimension (Nr) and
-%normalize.
-Y = fft(Mix(:,1));
-% Take the absolute value of FFT output
-% Output of FFT is double sided signal, but we are interested in only one side of the spectrum.
-% Hence we throw out half of the samples.
-P2 = abs(Y/Nr);
-P2 = fftshift(P2);
-P1 = P2(Nr/2+1:end);
-%plotting the range
-figure ('Name','Range from First FFT')
-% plot FFT output
-dist = linspace(0,(Nr/2)-1,Nr/2);
-plot(dist,P1);
-xlabel('Distance (m)');
-ylabel('|Amplitude|');
-xlim([0 Rmax]);
+% %run the FFT on the beat signal along the range bins dimension (Nr) and
+% %normalize.
+% Y = fft(Mix(:,1));
+% % Take the absolute value of FFT output
+% % Output of FFT is double sided signal, but we are interested in only one side of the spectrum.
+% % Hence we throw out half of the samples.
+% P2 = abs(Y/Nr);
+% P2 = fftshift(P2);
+% P1 = P2(Nr/2+1:end);
+% %plotting the range
+% figure ('Name','Range from First FFT')
+% % plot FFT output
+% dist = linspace(0,(Nr/2)-1,Nr/2);
+% plot(dist,P1);
+% xlabel('Distance (m)');
+% ylabel('|Amplitude|');
+% xlim([0 Rmax]);
 %% END 1D FFT -> this is inefficent and does not apply windows
-
-
 figure();
 Mix_Hann_Wnd=Mix.*(hamming(Nr)*ones(1,Nd));%tensor product with sampled hamm window 
 P2 = fft(Mix_Hann_Wnd)/Nr;%normalize amplitude spectrum
@@ -223,8 +221,18 @@ mwnoise_level = zeros(1,1);
 %matrix. Hence,few cells will not be thresholded. To keep the map size same
 % set those values to 0.
 
-
-
+cutidx(1,1)=1;
+cutidx(1,2)=1;
+cutidx(2,2)=1;
+cutidx(2,1)=1;
+figure()
+cutimage = zeros(Nd,Nd);
+ncutcells = size(cutidx,1);
+for k = 1:ncutcells
+    cutimage(cutidx(1,k),cutidx(2,k)) = 1;
+end
+imagesc(cutimage)
+axis equal
 
 
 
@@ -234,7 +242,7 @@ mwnoise_level = zeros(1,1);
 % *%TODO* :
 %display the CFAR output using the Surf function like we did for Range
 %Doppler Response output.
-figure,surf(doppler_axis,range_axis,'replace this with output');
+figure,surf(doppler,dist,'replace this with output');
 colorbar;
 
 

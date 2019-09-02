@@ -180,18 +180,13 @@ ylim([0 Rmax]);
 %% CFAR implementation
 
 %Slide Window through the complete Range Doppler Map
-
-% *%TODO* :
 %Select the number of Training Cells in both the dimensions.
-
-% *%TODO* :
+numTrain=[4,2];
 %Select the number of Guard Cells in both dimensions around the Cell under
 %test (CUT) for accurate estimation
-
-% *%TODO* :
+numGuard=[1,1];
 % offset the threshold by SNR value in dB
-
-% *%TODO* :
+offsetThreshold=3;
 %Create a vector to store noise_level for each iteration on training cells
 mwnoise_level = zeros(1,1);
 

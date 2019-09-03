@@ -20,7 +20,7 @@ vmax=70;
 % define the target's initial position and velocity. Note : Velocity
 % remains contant
 R=110; %initial distance of the target
-v=20; %velocity of the target - -> approaching deltaFD = positiv
+v=70; %velocity of the target - -> approaching deltaFD = positiv
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% FMCW Waveform Generation
 %Speed of light (m/s)

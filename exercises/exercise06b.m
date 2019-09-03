@@ -3,19 +3,22 @@ clc;
 close all;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Data_points
-Ns = 1000;
+Ns = 50;
 % Generate random noise
-s=abs(randn(Ns,1));
+s=abs(randn(Ns,Ns));
 %Targets location. Assigning bin 100, 200, 300 and 700 as Targets
 %with the amplitudes of 8, 9, 4, 11.
-s([100 ,200, 300, 700])=[8 9 4 11];
+s(0.1*Ns,0.1*Ns)=8;
+s(0.2*Ns,0.2*Ns)=9;
+s(0.3*Ns,0.3*Ns)=5;
+s(0.7*Ns,0.7*Ns)=11;
 %plot the output
-plot(s);
+surf(s);
 % TODO: Apply CFAR to detect the targets by filtering the noise.
 %Training Cells
-T=30;
+T=[3,5];
 %Guard Cells
-G=5;
+G=[1,2];
 % Offset : Adding room above noise threshold for desired SNR
 offset=5;
 % Vector to hold threshold values
@@ -24,12 +27,10 @@ threshold_cfar = [];
 signal_cfar = [];
 % 2. Slide window across the signal length
 % initlal image
-CFARImage=zeros(1,Ns);
+CFARImage=zeros(Ns,Ns);
 % 1 -> training cell
 % 2 -> guard cell
 % 3 -> cell under test
-slideLeftIdx=1;
-slideRightIdx=T;
 for i = 1:Ns
     noise_level=0;
     lowerIndex=i-G-T;
@@ -53,22 +54,22 @@ for i = 1:Ns
             CFARImage(k)=2; % coloring guard cell
         end
     end
-    %Compute CFAR
-    threshold= (noise_level/(2*T))*offset;
-    threshold_cfar =[threshold_cfar,{threshold}];
-    %Filter the signal above the threshold
-    
+%     %Compute CFAR
+%     threshold= (noise_level/(2*T))*offset;
+%     threshold_cfar =[threshold_cfar,{threshold}];
+%     %Filter the signal above the threshold
+%     
     signal =s(i);    
     CFARImage(i)=3; % CUT
-    if(i < T+G+1 || i > Ns-T-G )
-        CFARImage(i)=0; % CUT
-        signal=0;
-    end
-    
-    if(s(i)<threshold)
-        signal=0;
-    end
-    signal_cfar = [signal_cfar, {signal}];
+%     if(i < T+G+1 || i > Ns-T-G )
+%         CFARImage(i)=0; % CUT
+%         signal=0;
+%     end
+%     
+%     if(s(i)<threshold)
+%         signal=0;
+%     end
+%     signal_cfar = [signal_cfar, {signal}];
     imagesc(CFARImage);
     pause(0);
     colorbar;

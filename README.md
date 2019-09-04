@@ -5,11 +5,12 @@ Radar project from Udacity course
 # CA CFAR 2D
 This illustartes best the 2d CA CFAR alorithm. The file can be generated with exercise06b.m
 <img src="images/2dCACFAR.gif" width="779" height="414" />
--1 -> cells of the range doppler map which are initally set to zero to allow for propper filtering due to edges
-0  -> untouched cells of the range doppler map
-1  -> cell under test (CUT)
-2  -> guard cells
-3  -> training cells
+
+-1 -> cells of the range doppler map which are initally set to zero to allow for propper filtering due to edges  
+0  -> untouched cells of the range doppler map  
+1  -> cell under test (CUT)  
+2  -> guard cells  
+3  -> training cells  
 
 ## Some code snippets
 The training, guard cells and the threshold offset (dBW) are defined initally by

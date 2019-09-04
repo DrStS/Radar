@@ -3,95 +3,102 @@ clc;
 close all;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Data_points
-Ns = 50;
+Ni = 50;
+Nj = 50;
 % Generate random noise
-s=abs(randn(Ns,Ns));
+s=abs(rand(Ni,Nj));
 %Targets location. Assigning bin 100, 200, 300 and 700 as Targets
 %with the amplitudes of 8, 9, 4, 11.
-s(0.1*Ns,0.1*Ns)=8;
-s(0.2*Ns,0.2*Ns)=9;
-s(0.3*Ns,0.3*Ns)=5;
-s(0.7*Ns,0.7*Ns)=11;
-%plot the output
-surf(s);
-% TODO: Apply CFAR to detect the targets by filtering the noise.
+s(ceil(0.35*Ni),ceil(0.35*Nj))=8;
+s(ceil(0.25*Ni),ceil(0.65*Nj))=9;
+s(ceil(0.3*Ni),ceil(0.3*Nj))=5;
+s(ceil(0.7*Ni),ceil(0.7*Nj))=11;
 %Training Cells
-T=[3,5];
+T=[8,4];
 %Guard Cells
-G=[1,2];
-% Offset : Adding room above noise threshold for desired SNR
-offset=5;
-% Vector to hold threshold values
-threshold_cfar = [];
-%Vector to hold final signal after thresholding
-signal_cfar = [];
+G=[4,2];
 % 2. Slide window across the signal length
 % initlal image
-CFARImage=zeros(Ns,Ns);
-% 1 -> training cell
+CFARImage=zeros(Ni,Nj);
+threshold=zeros(Ni,Nj);
+singalFiltered=zeros(Ni,Nj);
+% Offset : Adding room above noise threshold for desired SNR
+offset=10;
+% 3 -> training cell
 % 2 -> guard cell
-% 3 -> cell under test
-for i = 1:Ns
-    noise_level=0;
-    lowerIndex=i-G-T;
-    if(lowerIndex>0)
-        for k = lowerIndex:(i-G-1)
-            CFARImage(k)=1; % coloring training cell
-            noise_level=s(k)+noise_level;
-        end
-        for k = (i-G):(i-1)
-            CFARImage(k)=2; % coloring guard cell
-        end
-        slideLeftIdx=slideLeftIdx+1;
-    end
-    upperIndex=i+G+T;
-    if(upperIndex<=Ns)
-        for k = (i+G):(upperIndex)
-            CFARImage(k)=1; % coloring training cell
-            noise_level=s(k)+noise_level;
-        end
-        for k = (i+1):(i+G)
-            CFARImage(k)=2; % coloring guard cell
+% 1 -> cell under test
+iSpan=[T(1)+G(1), Ni-T(1)-G(1)+1 ];
+jSpan=[T(2)+G(2), Nj-T(2)-G(2)+1 ];
+for j = 1:Nj
+    for i = 1:Ni
+        if(~(i>iSpan(1) && i<iSpan(2) && j>jSpan(1) && j<jSpan(2)))
+            s(i,j)=0;
+            CFARImage(i,j)=-1;
         end
     end
-%     %Compute CFAR
-%     threshold= (noise_level/(2*T))*offset;
-%     threshold_cfar =[threshold_cfar,{threshold}];
-%     %Filter the signal above the threshold
-%     
-    signal =s(i);    
-    CFARImage(i)=3; % CUT
-%     if(i < T+G+1 || i > Ns-T-G )
-%         CFARImage(i)=0; % CUT
-%         signal=0;
-%     end
-%     
-%     if(s(i)<threshold)
-%         signal=0;
-%     end
-%     signal_cfar = [signal_cfar, {signal}];
-    imagesc(CFARImage);
-    pause(0);
-    colorbar;
-    CFARImage=zeros(1,Ns);
 end
-% for i = 1:(Ns-(G+T+1))
-%     noise_level=sum(s(i:i+T-1));
-%     threshold= (noise_level/T)*offset;
-%     threshold_cfar =[threshold_cfar,{threshold}];
-%     signal =s(i+T+G);
-%     % 8. Filter the signal above the threshold
-%     if(signal<threshold)
-%         signal=0;
-%     end
-%     signal_cfar = [signal_cfar, {signal}];
-% end
-% plot the filtered signal
-figure();
-plot (cell2mat(signal_cfar),'g--');
-% plot original sig, threshold and filtered signal within the same figure.
-figure,plot(s);
-hold on,plot(cell2mat(circshift(threshold_cfar,G)),'r--','LineWidth',2)
-%hold on, plot (cell2mat(circshift(signal_cfar,(T+G))),'g--','LineWidth',4);
-hold on, plot (cell2mat(circshift(signal_cfar,(0))),'g--','LineWidth',4);
-legend('Signal','CFAR Threshold','detection')
+imagesc(CFARImage);
+colorbar;
+caxis([-1 3]);
+for j = 1:Nj
+    for i = 1:Ni
+        noise_level=0;
+        lowerIndexi=i-G(1)-T(1);
+        lowerIndexj=j-G(2)-T(2);
+        upperIndexi=i+G(1)+T(1);
+        upperIndexj=j+G(2)+T(2);
+        CFARImage(i,j)=1; % CUT
+        if((lowerIndexi>0 && lowerIndexj>0) && (upperIndexi<=Ni && upperIndexj<=Nj) )
+            for k = lowerIndexi:upperIndexi
+                for l = lowerIndexj:upperIndexj
+                    if(((i~=k) || (j~=l)))% spare CUT
+                        CFARImage(k,l)=3; % coloring training cell
+                        noise_level=s(k,l)+noise_level;
+                        addSignal=addSignal+1;
+                    end
+                end
+            end
+            % remove guard
+            for k = (i-G(1)):(i+G(1))
+                for l = (j-G(2)):(j+G(2))
+                    if(((i~=k) || (j~=l)))% spare CUT
+                        CFARImage(k,l)=CFARImage(k,l)-1; % coloring guard cell
+                        noise_level=noise_level-s(k,l);
+                        minusSignal=minusSignal+1;
+                    end
+                end
+            end
+        end
+        %Compute CFAR
+        totalNumberTrainingCells=(2*(T(1)+G(1))+1)*(2*(T(2)+G(2))+1)-((2*G(1)+1)*(2*G(2)+1));
+        threshold(i,j) = (noise_level/(totalNumberTrainingCells))*offset;
+        %Filter the signal above the threshold
+        signal =s(i,j);
+        if(s(i,j)<threshold(i,j))
+            signal=0;
+        end
+        singalFiltered(i,j) = signal;
+        imagesc(CFARImage);
+        colorbar;
+        caxis([-1 3]);
+        pause(0);
+        CFARImage=zeros(Ni,Nj);
+        for m = 1:Nj
+            for n = 1:Ni
+                if(s(n,m)==0)
+                    CFARImage(n,m)=-1;
+                end
+            end
+        end
+    end
+end
+%plot the output
+subplot(3,1,1);
+surf(s);
+title('Raw signal');
+subplot(3,1,2);
+surf(threshold);
+title('CA CFAR threshold');
+subplot(3,1,3);
+surf(singalFiltered);
+title('CA CFAR filtered');

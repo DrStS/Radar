@@ -3,7 +3,7 @@ clc;
 close all;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Data_points
-Ns = 1000;
+Ns = 100;
 % Generate random noise
 s=abs(randn(Ns,1));
 %Targets location. Assigning bin 100, 200, 300 and 700 as Targets
@@ -78,8 +78,8 @@ for i = 1:Ns
     signal_cfar = [signal_cfar, {signal}];
     CFARImage(i)=3; % CUT
     imagesc(CFARImage);
-    pause(0.0001);
     colorbar;
+    pause(0.0001);
     CFARImage=zeros(1,Ns);
 end
 % for i = 1:(Ns-(G+T+1))

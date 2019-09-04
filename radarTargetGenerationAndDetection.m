@@ -19,8 +19,8 @@ vmax=70;
 %% User Defined Range and Velocity of target
 % define the target's initial position and velocity. Note : Velocity
 % remains contant
-R=110; %initial distance of the target
-v=70; %velocity of the target - -> approaching deltaFD = positiv
+R=130; %initial distance of the target
+v=-10; %velocity of the target - -> approaching deltaFD = positiv
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% FMCW Waveform Generation
 %Speed of light (m/s)
@@ -136,7 +136,7 @@ Mix=reshape(Mix,Nr,Nd);
 % ylabel('|Amplitude|');
 % xlim([0 Rmax]);
 %% END 1D FFT -> this is inefficent and does not apply windows
-figure();
+figure('Name','FFT1D and FFT2D');
 Mix_Hann_Wnd=Mix.*(hann(Nr)*ones(1,Nd));%tensor product with sampled hamm window 
 P2 = fft(Mix_Hann_Wnd);%normalize amplitude spectrum
 P2=fft(P2'); % do second FFT on transpose of two-sided spectrum of 1st FFT
@@ -174,24 +174,37 @@ shading interp
 title('Surface plot');
 xlabel('Doppler velocity (m/s)');
 ylabel('Distance (m)');
-zlabel('dB|Amplitude|');
+zlabel('dBW|Amplitude|');
 xlim([-vmax vmax]);
 ylim([0 Rmax]);
 %% CFAR implementation
-
 %Slide Window through the complete Range Doppler Map
 %Select the number of Training Cells in both the dimensions.
-numTrain=[4,2];
+T=[8,4];
 %Select the number of Guard Cells in both dimensions around the Cell under
 %test (CUT) for accurate estimation
-numGuard=[1,1];
+G=[4,2];
 % offset the threshold by SNR value in dB
-offsetThreshold=3;
+offsetThresholdIndB=3;
 %Create a vector to store noise_level for each iteration on training cells
-mwnoise_level = zeros(1,1);
-
-
-% *%TODO* :
+Ni = Nr/2;
+Nj = Nd;
+threshold=zeros(Ni,Nj);
+singalFiltered=zeros(Ni,Nj);
+%The process above will generate a thresholded block, which is smaller
+%than the Range Doppler Map as the CUT cannot be located at the edges of
+%matrix. Hence,few cells will not be thresholded. To keep the map size same
+% set those values to 0.
+% --> Setting singal margin to zero
+iSpan=[T(1)+G(1), Ni-T(1)-G(1)+1 ];
+jSpan=[T(2)+G(2), Nj-T(2)-G(2)+1 ];
+for j = 1:Nj
+    for i = 1:Ni
+        if(~(i>iSpan(1) && i<iSpan(2) && j>jSpan(1) && j<jSpan(2)))
+            P1(i,j)=0;
+        end
+    end
+end
 %design a loop such that it slides the CUT across range doppler map by
 %giving margins at the edges for Training and Guard Cells.
 %For every iteration sum the signal level within all the training
@@ -201,44 +214,93 @@ mwnoise_level = zeros(1,1);
 %Further add the offset to it to determine the threshold. Next, compare the
 %signal under CUT with this threshold. If the CUT level > threshold assign
 %it a value of 1, else equate it to 0.
-
-
-% Use RDM[x,y] as the matrix from the output of 2D FFT for implementing
-% CFAR
-
-
-
-
-
-% *%TODO* :
-% The process above will generate a thresholded block, which is smaller
-%than the Range Doppler Map as the CUT cannot be located at the edges of
-%matrix. Hence,few cells will not be thresholded. To keep the map size same
-% set those values to 0.
-
-cutidx(1,1)=1;
-cutidx(1,2)=1;
-cutidx(2,2)=1;
-cutidx(2,1)=1;
-figure()
-cutimage = zeros(Nd,Nd);
-ncutcells = size(cutidx,1);
-for k = 1:ncutcells
-    cutimage(cutidx(1,k),cutidx(2,k)) = 1;
+RDM=abs(P1);
+for j = 1:Nj
+    for i = 1:Ni
+        noiseLevel=0;
+        lowerIndexi=i-G(1)-T(1);
+        lowerIndexj=j-G(2)-T(2);
+        upperIndexi=i+G(1)+T(1);
+        upperIndexj=j+G(2)+T(2);
+        if((lowerIndexi>0 && lowerIndexj>0) && (upperIndexi<=Ni && upperIndexj<=Nj) )
+            for k = lowerIndexi:upperIndexi
+                for l = lowerIndexj:upperIndexj
+                    if(((i~=k) || (j~=l)))% spare CUT
+                        % coloring training cell
+                        noiseLevel=RDM(k,l)+noiseLevel;
+                    end
+                end
+            end
+            % remove guard
+            for k = (i-G(1)):(i+G(1))
+                for l = (j-G(2)):(j+G(2))
+                    if(((i~=k) || (j~=l)))% spare CUT
+                        % coloring guard cell
+                        noiseLevel=noiseLevel-RDM(k,l);
+                    end
+                end
+            end
+        end
+        %Compute CFAR
+        totalNumberTrainingCells=(2*(T(1)+G(1))+1)*(2*(T(2)+G(2))+1)-((2*G(1)+1)*(2*G(2)+1));       
+        relNoiseLevel=noiseLevel/totalNumberTrainingCells;
+        if(relNoiseLevel>0)
+            relNoiseLevelOffset=db2pow(10*log10(relNoiseLevel)+offsetThresholdIndB);
+            %disp(relNoiseLevelOffset/relNoiseLevel)
+            threshold(i,j) = relNoiseLevelOffset;
+        else
+            threshold(i,j) = relNoiseLevel;
+        end
+        %Filter the signal above the threshold
+        signal =RDM(i,j);
+        if(RDM(i,j)<threshold(i,j))
+            signal=0;
+        end
+        singalFiltered(i,j) = signal;
+    end
 end
-imagesc(cutimage)
-axis equal
-
-
-
-
-
-
-% *%TODO* :
-%display the CFAR output using the Surf function like we did for Range
-%Doppler Response output.
-figure,surf(doppler,dist,'replace this with output');
-colorbar;
-
-
+%plot the output
+figure('Name','CA CFAR #1');
+subplot(2,1,1);
+surf(doppler,dist,10*log(RDM));
+colormap default
+shading interp
+title('Unfiltered range doppler signal');
+xlabel('Doppler velocity (m/s)');
+ylabel('Distance (m)');
+zlabel('dBW|Amplitude|');
+xlim([-vmax vmax]);
+ylim([0 Rmax]);
+subplot(2,1,2);
+surf(doppler,dist,RDM);
+colormap default
+shading interp
+title('Unfiltered range doppler signal');
+xlabel('Doppler velocity (m/s)');
+ylabel('Distance (m)');
+zlabel('|Amplitude|');
+xlim([-vmax vmax]);
+ylim([0 Rmax]);
+figure('Name','CA CFAR #2');
+subplot(2,1,1);
+surf(doppler,dist,threshold);
+colormap default
+shading interp
+title('CA CFAR threshold');
+xlabel('Doppler velocity (m/s)');
+ylabel('Distance (m)');
+zlabel('|Amplitude|');
+subplot(2,1,2);
+surf(doppler,dist,singalFiltered);
+colormap default
+shading interp
+title('CA CFAR filtered');
+xlabel('Doppler velocity (m/s)');
+ylabel('Distance (m)');
+zlabel('|Amplitude|');
+[M,I] = max(singalFiltered(:));
+[i, j] = ind2sub(size(singalFiltered),I);
+hold on;
+plot3(doppler(j),dist(i),singalFiltered(i,j),'xr','markersize',10);
+text(doppler(j),dist(i),singalFiltered(i,j),['  dist: ' num2str(dist(i)) ' (m) doppler: ' num2str(doppler(j)) ' (m/s)'] );
 

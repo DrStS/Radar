@@ -3,11 +3,8 @@
 Radar project from Udacity course
 
 # Range doppler FFT
-
-Final results:
 <img src="images/rangedoppler1.png" width="779" />
 
-<img src="images/rangedoppler2.png" width="779" />
 
 # CA CFAR 2D
 This illustartes best the 2d CA CFAR alorithm. The file can be generated with exercise06b.m
@@ -18,6 +15,8 @@ This illustartes best the 2d CA CFAR alorithm. The file can be generated with ex
 1  -> cell under test (CUT)  
 2  -> guard cells  
 3  -> training cells  
+
+<img src="images/rangedoppler2.png" width="779" />
 
 ## Some code snippets
 The training, guard cells and the threshold offset (dBW) are defined initally by

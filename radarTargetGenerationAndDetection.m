@@ -3,8 +3,13 @@ format long;
 clc;
 close all;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Radar Specifications
-%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% User defined range and velocity of target user input
+% define the target's initial position and velocity. Note : Velocity remains contant
+R=130; %initial distance of the target
+v=-10; %velocity of the target - -> approaching deltaFD = positiv
+showWaveGen = 0; % useful for debugging waveform generation
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Radar specifications user input
 % Frequency of operation = 77GHz
 fc= 77e9;
 % Max Range = 200m
@@ -13,39 +18,34 @@ Rmax= 200;
 dres=1;
 % Max Velocity = 100 m/s
 vmax=70;
-%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%speed of light = 3e8
-%% User Defined Range and Velocity of target
-% define the target's initial position and velocity. Note : Velocity
-% remains contant
-R=130; %initial distance of the target
-v=-10; %velocity of the target - -> approaching deltaFD = positiv
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% FMCW Waveform Generation
+%% FMCW user input waveform generation
 %Speed of light (m/s)
 c = 3*10^8;
 %Calculate the wavelength (m)
 lambda = c/fc;
 %Design the FMCW waveform by giving the specs of each of its parameters.
-% Calculate the Bandwidth (B), Chirp Time (Tchirp) and Slope (slope) of the FMCW
-% chirp using the requirements above.
+% Calculate the Bandwidth (B), Chirp Time (Tchirp) and Slope (slope) of the FMCW chirp using the requirements above.
 B=c/(2*dres); %(Hz)
 Tchirp=5.5*2*Rmax/c; %should be at least 5 to 6 times the round trip time (s)
 slope=B/Tchirp; %(-)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% END FMCW Waveform Generation
 %The number of chirps in one sequence. Its ideal to have 2^ value for the ease of running the FFT for Doppler Estimation.
-Nd=2^8;                   % #of doppler cells OR #of sent periods % number of chirps
+Nd=2^6;                   % #of doppler cells OR #of sent periods % number of chirps
+if(showWaveGen)
+    Nd=2^2;
+end
 %The number of samples on each chirp.
 Nr=2^12;
+if(showWaveGen)
+    Nr=2^21;
+end
 % Timestamp for running the displacement scenario for every sample on each chirp
 t=linspace(0,Nd*Tchirp,Nr*Nd); %total time for samples
 deltaT=t(2)-t(1);
-%Creating the vectors for Tx, Rx and Mix based on the total samples input.
+%Creating the vectors for Tx, Rx
 Tx=zeros(1,length(t)); %transmitted signal
 Rx=zeros(1,length(t)); %received signal
-Mix = zeros(1,length(t)); %beat signal
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Signal generation and Moving Target simulation
 % Running the radar scenario over the time.
@@ -70,7 +70,7 @@ for i=1:length(t)
     %Rx
     tScal2=t(i)-(m*Tchirp);
     ttilde=tScal2-2*(R-v*t(i))/c;
-    currentFreqRx=fc+slope*ttilde;  
+    currentFreqRx=fc+slope*ttilde;
     if(currentFreqRx>endFreqRx)
         m=m+1; %next bin
         tScal2=t(i)-(m*Tchirp);
@@ -81,41 +81,49 @@ for i=1:length(t)
     end
 end
 Mix=Tx.*Rx;
-% windowSize=Nr/2^4;
-% [~,~,~,pxx1,fc1,tc1] = spectrogram(Tx,windowSize,ceil(windowSize*0.7),windowSize,1/deltaT,'yaxis','MinThreshold',-80);
-% ylim([77,77.2]);
-% title('Linear Chirp Tx');
-% windowSize=Nr/2^4;
-% [~,~,~,pxx2,fc2,tc2] = spectrogram(Rx,windowSize,ceil(windowSize*0.7),windowSize,1/deltaT,'yaxis','MinThreshold',-80);
-% title('Linear Chirp Rx');
-% ylim([77,78]);
-% x1=tc1(pxx1>0);
-% y1=fc1(pxx1>0);
-% plot(x1,y1,'.');
-% hold on;
-% x2=tc2(pxx2>0);
-% y2=fc2(pxx2>0);
-% plot(x2,y2,'.r');
-% legend('Tx','Rx');
+if(showWaveGen)
+    windowSize=Nr/2^4;
+    [~,~,~,pxx1,fc1,tc1] = spectrogram(Tx,windowSize,ceil(windowSize*0.7),windowSize,1/deltaT,'yaxis','MinThreshold',-80);
+    ylim([77,77.2]);
+    title('Linear Chirp Tx');
+    windowSize=Nr/2^4;
+    [~,~,~,pxx2,fc2,tc2] = spectrogram(Rx,windowSize,ceil(windowSize*0.7),windowSize,1/deltaT,'yaxis','MinThreshold',-80);
+    title('Linear Chirp Rx');
+    ylim([77,78]);
+    x1=tc1(pxx1>0);
+    y1=fc1(pxx1>0);
+    plot(x1,y1,'.');
+    hold on;
+    x2=tc2(pxx2>0);
+    y2=fc2(pxx2>0);
+    plot(x2,y2,'.r');
+    legend('Tx','Rx');
+end
 disp(['================================================================']);
 disp(['VERIFICATION']);
 disp(['================================================================']);
 disp(['Start freq TX ref: ' num2str(fc) ' (Hz), ' num2str(fc/1e9) ' (GHz)']);
-% disp(['Start freq TX: ' num2str(y1(1)) ' (Hz), ' num2str(y1(1)/1e9) ' (GHz) , error (%): ' num2str(((y1(1)-fc)/fc)*1e2)]);
+if(showWaveGen)
+    disp(['Start freq TX: ' num2str(y1(1)) ' (Hz), ' num2str(y1(1)/1e9) ' (GHz) , error (%): ' num2str(((y1(1)-fc)/fc)*1e2)]);
+end
 disp(['End freq TX ref: ' num2str(endFreqTx) ' (Hz), ' num2str(endFreqTx/1e9) ' (GHz)']);
 disp(['================================================================']);
 startFreqRxRef=(c/(c+v))*fc;
 disp(['Start freq RX ref: ' num2str(startFreqRxRef) ' (Hz), ' num2str(startFreqRxRef/1e9)  ' (GHz)']);
-% startFreqRx=y2(1);
-% disp(['Start freq RX: ' num2str(y2(1)) ' (Hz), ' num2str(startFreqRx/1e9) ' (GHz), error (%): ' num2str(((startFreqRxRef-startFreqRx)/startFreqRx)*1e2)]);
+if(showWaveGen)
+    startFreqRx=y2(1);
+    disp(['Start freq RX: ' num2str(y2(1)) ' (Hz), ' num2str(startFreqRx/1e9) ' (GHz), error (%): ' num2str(((startFreqRxRef-startFreqRx)/startFreqRx)*1e2)]);
+end
 disp(['End freq RX ref: ' num2str(endFreqRx) ' (Hz), ' num2str(endFreqRx/1e9) ' (GHz)']);
 disp(['================================================================']);
 disp(['Doppler freq shift ref: ' num2str(deltaDoppler) ' (Hz), ' num2str(deltaDoppler/1e9) ' (GHz)']);
-%disp(['Doppler freq shift: ' num2str(y2(1)-y1(2)) ' (Hz), ' num2str((y2(1)-y1(2))/1e9) ' (GHz), error (%): ' num2str((((y2(1)-y1(2))-deltaDoppler)/deltaDoppler)*1e2)]);
+if(showWaveGen)
+    disp(['Doppler freq shift: ' num2str(y2(1)-y1(2)) ' (Hz), ' num2str((y2(1)-y1(2))/1e9) ' (GHz), error (%): ' num2str((((y2(1)-y1(2))-deltaDoppler)/deltaDoppler)*1e2)]);
+    pause(100);
+end
 %% END Signal generation and Moving Target simulation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%reshape the vector into Nr*Nd array. Nr and Nd here would also define the size of
-%Range and Doppler FFT respectively.
+%reshape the vector into Nr*Nd array. Nr and Nd here would also define the size of Range and Doppler FFT respectively.
 Mix=reshape(Mix,Nr,Nd);
 %% START 1D FFT RANGE MEASUREMENT
 % %run the FFT on the beat signal along the range bins dimension (Nr) and
@@ -135,9 +143,9 @@ Mix=reshape(Mix,Nr,Nd);
 % xlabel('Distance (m)');
 % ylabel('|Amplitude|');
 % xlim([0 Rmax]);
-%% END 1D FFT -> this is inefficent and does not apply windows
+%% END 1D FFT -> this is inefficent and does not apply propper windowing
 figure('Name','FFT1D and FFT2D');
-Mix_Hann_Wnd=Mix.*(hann(Nr)*ones(1,Nd));%tensor product with sampled hamm window 
+Mix_Hann_Wnd=Mix.*(hann(Nr)*ones(1,Nd));%tensor product with sampled hamm window
 P2 = fft(Mix_Hann_Wnd);%normalize amplitude spectrum
 P2=fft(P2'); % do second FFT on transpose of two-sided spectrum of 1st FFT
 P1 = fftshift(P2');
@@ -169,32 +177,31 @@ grid on;
 grid minor;
 subplot(3,2,[2,4,6]);
 surf(doppler,dist,10*log10(abs(P1)));
-colormap default
-shading interp
+%colormap default
+%shading interp
 title('Surface plot');
 xlabel('Doppler velocity (m/s)');
 ylabel('Distance (m)');
 zlabel('dBW|Amplitude|');
 xlim([-vmax vmax]);
 ylim([0 Rmax]);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% CFAR implementation
-%Slide Window through the complete Range Doppler Map
-%Select the number of Training Cells in both the dimensions.
+% Start User input
+%Slide Window through the complete Range Doppler Map select the number of Training Cells in both the dimensions.
 T=[8,4];
-%Select the number of Guard Cells in both dimensions around the Cell under
-%test (CUT) for accurate estimation
+%Select the number of Guard Cells in both dimensions around the Cell under test (CUT) for accurate estimation
 G=[4,2];
 % offset the threshold by SNR value in dB
 offsetThresholdIndB=3;
+% End user input
 %Create a vector to store noise_level for each iteration on training cells
 Ni = Nr/2;
 Nj = Nd;
 threshold=zeros(Ni,Nj);
 singalFiltered=zeros(Ni,Nj);
-%The process above will generate a thresholded block, which is smaller
-%than the Range Doppler Map as the CUT cannot be located at the edges of
-%matrix. Hence,few cells will not be thresholded. To keep the map size same
-% set those values to 0.
+%The process above will generate a thresholded block, which is smaller than the Range Doppler Map as the CUT cannot be 
+% located at the edges of matrix. Hence,few cells will not be thresholded. To keep the map size same set those values to 0.
 % --> Setting singal margin to zero
 iSpan=[T(1)+G(1), Ni-T(1)-G(1)+1 ];
 jSpan=[T(2)+G(2), Nj-T(2)-G(2)+1 ];
@@ -242,7 +249,7 @@ for j = 1:Nj
             end
         end
         %Compute CFAR
-        totalNumberTrainingCells=(2*(T(1)+G(1))+1)*(2*(T(2)+G(2))+1)-((2*G(1)+1)*(2*G(2)+1));       
+        totalNumberTrainingCells=(2*(T(1)+G(1))+1)*(2*(T(2)+G(2))+1)-((2*G(1)+1)*(2*G(2)+1));
         relNoiseLevel=noiseLevel/totalNumberTrainingCells;
         if(relNoiseLevel>0)
             relNoiseLevelOffset=db2pow(10*log10(relNoiseLevel)+offsetThresholdIndB);
@@ -259,7 +266,8 @@ for j = 1:Nj
         singalFiltered(i,j) = signal;
     end
 end
-%plot the output
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Plot the output of CA CFAR
 figure('Name','CA CFAR #1');
 subplot(2,1,1);
 surf(doppler,dist,10*log(RDM));
@@ -303,4 +311,4 @@ zlabel('|Amplitude|');
 hold on;
 plot3(doppler(j),dist(i),singalFiltered(i,j),'xr','markersize',10);
 text(doppler(j),dist(i),singalFiltered(i,j),['  dist: ' num2str(dist(i)) ' (m) doppler: ' num2str(doppler(j)) ' (m/s)'] );
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

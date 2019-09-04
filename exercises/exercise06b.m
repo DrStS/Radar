@@ -3,8 +3,8 @@ clc;
 close all;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Data_points
-Ni = 50;
-Nj = 50;
+Ni = 60; % range
+Nj = 40; % doppler
 % Generate random noise
 s=abs(rand(Ni,Nj));
 %Targets location. Assigning bin 100, 200, 300 and 700 as Targets
@@ -40,6 +40,12 @@ end
 imagesc(CFARImage);
 colorbar;
 caxis([-1 3]);
+writeFile = 1;
+if(writeFile)
+    h = figure;
+    filename = '2dCACFAR.gif';
+end
+nFrame=1;
 for j = 1:Nj
     for i = 1:Ni
         noise_level=0;
@@ -54,7 +60,6 @@ for j = 1:Nj
                     if(((i~=k) || (j~=l)))% spare CUT
                         CFARImage(k,l)=3; % coloring training cell
                         noise_level=s(k,l)+noise_level;
-                        addSignal=addSignal+1;
                     end
                 end
             end
@@ -64,7 +69,6 @@ for j = 1:Nj
                     if(((i~=k) || (j~=l)))% spare CUT
                         CFARImage(k,l)=CFARImage(k,l)-1; % coloring guard cell
                         noise_level=noise_level-s(k,l);
-                        minusSignal=minusSignal+1;
                     end
                 end
             end
@@ -81,7 +85,23 @@ for j = 1:Nj
         imagesc(CFARImage);
         colorbar;
         caxis([-1 3]);
-        pause(0);
+        xlabel('Index j');
+        ylabel('Index i');
+        pbaspect([Nj Ni 1]);
+                %pause(0);
+        if(writeFile)
+            drawnow
+            % Capture the plot as an image
+            frame = getframe(h);
+            im = frame2im(frame);
+            [imind,cm] = rgb2ind(im,256);
+            if nFrame == 1
+                imwrite(imind,cm,filename,'gif','DelayTime',0.025, 'Loopcount',inf);
+            else
+                imwrite(imind,cm,filename,'gif','DelayTime',0.025, 'WriteMode','append');
+            end
+            nFrame=nFrame+1;
+        end
         CFARImage=zeros(Ni,Nj);
         for m = 1:Nj
             for n = 1:Ni

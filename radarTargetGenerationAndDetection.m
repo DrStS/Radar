@@ -31,7 +31,7 @@ Tchirp=5.5*2*Rmax/c; %should be at least 5 to 6 times the round trip time (s)
 slope=B/Tchirp; %(-)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %The number of chirps in one sequence. Its ideal to have 2^ value for the ease of running the FFT for Doppler Estimation.
-Nd=2^6;                   % #of doppler cells OR #of sent periods % number of chirps
+Nd=2^8;                   % #of doppler cells OR #of sent periods % number of chirps
 if(showWaveGen)
     Nd=2^2;
 end
@@ -177,8 +177,8 @@ grid on;
 grid minor;
 subplot(3,2,[2,4,6]);
 surf(doppler,dist,10*log10(abs(P1)));
-%colormap default
-%shading interp
+colormap default
+shading interp
 title('Surface plot');
 xlabel('Doppler velocity (m/s)');
 ylabel('Distance (m)');

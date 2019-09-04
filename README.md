@@ -2,6 +2,13 @@
 <img src="images/1.png" width="779" height="414" />
 Radar project from Udacity course
 
+# Range doppler FFT
+
+Final results:
+<img src="images/rangedoppler1.png" width="779" />
+
+<img src="images/rangedoppler2.png" width="779" />
+
 # CA CFAR 2D
 This illustartes best the 2d CA CFAR alorithm. The file can be generated with exercise06b.m
 <img src="images/2dCACFAR.gif" width="779" />
